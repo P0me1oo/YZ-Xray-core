@@ -32,7 +32,8 @@
 | --- | --- |
 | Xray 上游预发布 Tag / commit | `v26.7.11` / `50231eaff98ccc31b5cbd247a721c16e97fe5ec1` |
 | YZ-Xray-core fork Tag / commit | `v26.7.11-yz.1` / `620bee93867095f73880056cdfb08bc54a15f69e` |
-| YZboard-Node Release Tag / commit | `v0.1.0-yz.1` / `a02dbce321cbe921ce04cf692d460f317f528ef5` |
+| YZboard-Node 上游基线 | `v1.13` / `0a29338e1f102a462363ce3527417029f89bab28` |
+| YZboard-Node Release Tag / commit | `v1.13-yz.1` / `6fb176456c305f7aaad47c19f6acd7d1bca66d0b` |
 | YZboard 兼容标识 / 代码 commit | `xray-v26.7.11-yz.1` / `342ceb5305af5df557fd85264a3157de84d233c5` |
 | sing-box 请求 / 实际 replacement | `v1.13.2` / `github.com/cedar2025/sing-box v1.14.0-alpha.2.0.20260316103356-2e665cb7e295` |
 
