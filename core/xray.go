@@ -10,6 +10,7 @@ import (
 	"github.com/xtls/xray-core/common/platform"
 	"github.com/xtls/xray-core/common/serial"
 	"github.com/xtls/xray-core/features"
+	"github.com/xtls/xray-core/features/bandwidth"
 	"github.com/xtls/xray-core/features/dns"
 	"github.com/xtls/xray-core/features/dns/localdns"
 	"github.com/xtls/xray-core/features/inbound"
@@ -17,7 +18,6 @@ import (
 	"github.com/xtls/xray-core/features/policy"
 	"github.com/xtls/xray-core/features/routing"
 	"github.com/xtls/xray-core/features/stats"
-	"github.com/xtls/xray-core/features/bandwidth"
 	"github.com/xtls/xray-core/transport/internet"
 )
 

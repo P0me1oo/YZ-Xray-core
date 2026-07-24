@@ -4,27 +4,32 @@ import (
 	"context"
 	"testing"
 
-	bandwidthfeat "github.com/xtls/xray-core/features/bandwidth"
 	"github.com/xtls/xray-core/common/buf"
 	"github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/protocol"
 	"github.com/xtls/xray-core/common/session"
 	"github.com/xtls/xray-core/core"
+	bandwidthfeat "github.com/xtls/xray-core/features/bandwidth"
 	featurepolicy "github.com/xtls/xray-core/features/policy"
 	featurestats "github.com/xtls/xray-core/features/stats"
 	"github.com/xtls/xray-core/transport"
 	"golang.org/x/time/rate"
 )
 
-
 type stubWriter struct{ calls int }
-func (w *stubWriter) WriteMultiBuffer(mb buf.MultiBuffer) error { w.calls++; buf.ReleaseMulti(mb); return nil }
+
+func (w *stubWriter) WriteMultiBuffer(mb buf.MultiBuffer) error {
+	w.calls++
+	buf.ReleaseMulti(mb)
+	return nil
+}
 func (w *stubWriter) Close() error { return nil }
-func (w *stubWriter) Interrupt() {}
+func (w *stubWriter) Interrupt()   {}
 
 type stubReader struct{}
+
 func (stubReader) ReadMultiBuffer() (buf.MultiBuffer, error) { return nil, nil }
-func (stubReader) Interrupt() {}
+func (stubReader) Interrupt()                                {}
 
 func TestApplyBandwidthLimitWrapsWriterOnly(t *testing.T) {
 	bm := bandwidthfeat.New()
@@ -49,7 +54,7 @@ func TestWrapLinkUsesBandwidthFeature(t *testing.T) {
 		t.Fatalf("AddFeature(bandwidth) error = %v", err)
 	}
 	ctx := context.WithValue(context.Background(), core.XrayKey(1), inst)
-	ctx = session.ContextWithInbound(ctx, &session.Inbound{User: &protocol.MemoryUser{Email: "user@example.com"}, Source: net.TCPDestination(net.IPAddress([]byte{127,0,0,1}), 1234)})
+	ctx = session.ContextWithInbound(ctx, &session.Inbound{User: &protocol.MemoryUser{Email: "user@example.com"}, Source: net.TCPDestination(net.IPAddress([]byte{127, 0, 0, 1}), 1234)})
 	link := &transport.Link{Reader: &buf.TimeoutWrapperReader{Reader: stubReader{}}, Writer: &stubWriter{}}
 	_ = WrapLink(ctx, featurepolicy.DefaultManager{}, featurestats.NoopManager{}, link)
 	if _, ok := link.Writer.(*RateLimitWriter); !ok {
@@ -59,7 +64,6 @@ func TestWrapLinkUsesBandwidthFeature(t *testing.T) {
 		t.Fatal("expected reader wrapper to remain TimeoutWrapperReader")
 	}
 }
-
 
 func TestRateLimitWriterRespectsCanceledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())

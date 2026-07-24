@@ -78,6 +78,14 @@ func (s *Server) Network() []net.Network {
 	return []net.Network{net.Network_TCP}
 }
 
+func authenticatedUser(conn stat.Connection) *protocol.MemoryUser {
+	type userConnection interface{ User() *protocol.MemoryUser }
+	if v, ok := stat.TryUnwrapStatsConn(conn).(userConnection); ok {
+		return v.User()
+	}
+	return nil
+}
+
 func (s *Server) Process(ctx context.Context, network net.Network, conn stat.Connection, dispatcher routing.Dispatcher) error {
 	inbound := session.InboundFromContext(ctx)
 	inbound.Name = "hysteria"
@@ -87,13 +95,10 @@ func (s *Server) Process(ctx context.Context, network net.Network, conn stat.Con
 
 	var useremail string
 	var userlevel uint32
-	type User interface{ User() *protocol.MemoryUser }
-	if v, ok := iConn.(User); ok {
-		inbound.User = v.User()
-		if inbound.User != nil {
-			useremail = inbound.User.Email
-			userlevel = inbound.User.Level
-		}
+	inbound.User = authenticatedUser(conn)
+	if inbound.User != nil {
+		useremail = inbound.User.Email
+		userlevel = inbound.User.Level
 	}
 
 	if _, ok := iConn.(*hysteria.InterUdpConn); ok {

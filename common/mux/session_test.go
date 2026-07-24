@@ -49,4 +49,3 @@ func TestSessionManagerClose(t *testing.T) {
 		t.Error("not able to close")
 	}
 }
-

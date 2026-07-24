@@ -191,7 +191,10 @@ func (s *Session) Close(locked bool) error {
 			input.ReturnAnError(io.EOF)
 			runtime.Gosched()
 			input.Recover()
-		case interface{ ReturnAnError(error); Recover() error }:
+		case interface {
+			ReturnAnError(error)
+			Recover() error
+		}:
 			input.ReturnAnError(io.EOF)
 			runtime.Gosched()
 			input.Recover()

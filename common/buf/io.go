@@ -36,9 +36,9 @@ type TimeoutWrapperReader struct {
 	err  error
 	done chan struct{}
 
-	mu         sync.Mutex
-	forcedErr  error
-	hasForced  bool
+	mu        sync.Mutex
+	forcedErr error
+	hasForced bool
 }
 
 func (r *TimeoutWrapperReader) ReadMultiBuffer() (MultiBuffer, error) {
