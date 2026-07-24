@@ -1,6 +1,6 @@
 # YZ-Xray-core 版本说明
 
-当前 fork 版本为 `v26.7.11-yz.1`。
+当前 fork 版本为 `v26.7.11-yz.1`，对应 fork commit 为 `620bee93867095f73880056cdfb08bc54a15f69e`。
 
 ## 上游基线
 
@@ -25,5 +25,17 @@
 - 不创建或覆盖官方 `v26.7.11` Tag；
 - Go 模块消费者固定到明确的 YZ fork commit，并记录生成的 pseudo-version；
 - 同一上游版本继续修订时递增 `yz.N`；同步到新上游版本后从 `yz.1` 重新开始。
+
+## 三仓库兼容矩阵
+
+| 项目 | 固定标识 |
+| --- | --- |
+| Xray 上游预发布 Tag / commit | `v26.7.11` / `50231eaff98ccc31b5cbd247a721c16e97fe5ec1` |
+| YZ-Xray-core fork Tag / commit | `v26.7.11-yz.1` / `620bee93867095f73880056cdfb08bc54a15f69e` |
+| YZboard-Node Release Tag / commit | `v0.1.0-yz.1` / `a02dbce321cbe921ce04cf692d460f317f528ef5` |
+| YZboard 兼容标识 / 代码 commit | `xray-v26.7.11-yz.1` / `342ceb5305af5df557fd85264a3157de84d233c5` |
+| sing-box 请求 / 实际 replacement | `v1.13.2` / `github.com/cedar2025/sing-box v1.14.0-alpha.2.0.20260316103356-2e665cb7e295` |
+
+YZboard 没有独立的 Xray Tag；面板使用自身版本和代码 commit 回滚。Node 的 Xray `replace` 必须固定到上表 fork pseudo-version，不得改为 `main` 或其他移动引用。
 
 发布前必须确认 `xray version` 的上游版本为 `26.7.11`，构建信息能够区分 YZ Tag 或 commit，并运行相关单元测试和目标平台构建。
