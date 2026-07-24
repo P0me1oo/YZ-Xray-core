@@ -23,6 +23,9 @@ var (
 	Version_z byte = 11
 )
 
+// YZForkVersion 标识当前 YZ fork 的可回滚补丁版本。
+const YZForkVersion = "v26.7.11-yz.1"
+
 var (
 	build    = "Custom"
 	codename = "Xray, Penetrates Everything."
