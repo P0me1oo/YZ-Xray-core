@@ -46,7 +46,7 @@ func NewClient(ctx context.Context, config *ClientConfig) (*Outbound, error) {
 		if config.Key == "" {
 			return nil, errors.New("missing psk")
 		}
-		method, err := shadowaead_2022.NewWithPassword(config.Method, config.Key, nil)
+		method, err := shadowaead_2022.NewWithPassword(config.Method, config.Key, timeFuncFromContext(ctx))
 		if err != nil {
 			return nil, errors.New("create method").Base(err)
 		}

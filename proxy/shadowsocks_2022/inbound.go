@@ -54,7 +54,7 @@ func NewServer(ctx context.Context, config *ServerConfig) (*Inbound, error) {
 	if !C.Contains(shadowaead_2022.List, config.Method) {
 		return nil, errors.New("unsupported method ", config.Method)
 	}
-	service, err := shadowaead_2022.NewServiceWithPassword(config.Method, config.Key, 500, inbound, nil)
+	service, err := shadowaead_2022.NewServiceWithPassword(config.Method, config.Key, 500, inbound, timeFuncFromContext(ctx))
 	if err != nil {
 		return nil, errors.New("create service").Base(err)
 	}

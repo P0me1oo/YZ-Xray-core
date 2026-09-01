@@ -1,6 +1,6 @@
 # YZ-Xray-core 版本说明
 
-当前 fork 版本为 `v26.7.11-yz.1`，对应 fork commit 为 `620bee93867095f73880056cdfb08bc54a15f69e`。
+当前源码目标版本为 `v26.7.11-yz.2`，fork commit 待本次修改提交后固定。最近已固定版本为 `v26.7.11-yz.1`，对应 commit `620bee93867095f73880056cdfb08bc54a15f69e`。
 
 ## 上游基线
 
@@ -17,11 +17,16 @@
 - Dispatcher 按用户邮箱注册上传、下载和在线状态统计；
 - 每用户共享限速器及动态更新能力；
 - XUDP 关闭路径兼容统计和超时 Reader 包装；
-- Hysteria2 用户热更新、统计和协议能力回归测试。
+- Hysteria2 用户热更新、统计和协议能力回归测试；
+- SS2022 单用户入站、多人入站和出站从 Xray 创建上下文读取可选的 `ntp.TimeService`，供 YZboard-Node 在不修改系统时间的前提下校准协议时间。
+
+SS2022 时间补丁只改变 Shadowsocks 2022 构造器使用的时间函数。上下文没有注册时间服务时仍回退到库原有的系统时间行为；传统 Shadowsocks、VLESS、VMess、Trojan 和中转原始转发服务不受影响。
+
+该补丁用于满足 YZboard-Node `v1.13-yz.14` 的前置 SS2022 出站和落地 SS2022 入站需求。若后续 Xray 上游原生支持从上下文或配置注入 SS2022 时间源，可以删除本补丁并恢复上游实现。
 
 ## 发布与依赖约定
 
-- Xray 二进制 Release 使用 `v<上游版本>-yz.N` Tag，本版本为 `v26.7.11-yz.1`；
+- Xray 二进制 Release 使用 `v<上游版本>-yz.N` Tag，本次源码目标版本为 `v26.7.11-yz.2`；
 - 不创建或覆盖官方 `v26.7.11` Tag；
 - Go 模块消费者固定到明确的 YZ fork commit，并记录生成的 pseudo-version；
 - 同一上游版本继续修订时递增 `yz.N`；同步到新上游版本后从 `yz.1` 重新开始。
@@ -31,7 +36,8 @@
 | 项目 | 固定标识 |
 | --- | --- |
 | Xray 上游预发布 Tag / commit | `v26.7.11` / `50231eaff98ccc31b5cbd247a721c16e97fe5ec1` |
-| YZ-Xray-core fork Tag / commit | `v26.7.11-yz.1` / `620bee93867095f73880056cdfb08bc54a15f69e` |
+| YZ-Xray-core 源码目标 Tag / commit | `v26.7.11-yz.2` / 待固定 |
+| YZ-Xray-core 最近已固定 Tag / commit | `v26.7.11-yz.1` / `620bee93867095f73880056cdfb08bc54a15f69e` |
 | YZboard-Node 上游基线 | `v1.13` / `0a29338e1f102a462363ce3527417029f89bab28` |
 | YZboard-Node Release Tag / commit | `v1.13-yz.1` / `6fb176456c305f7aaad47c19f6acd7d1bca66d0b` |
 | YZboard 兼容标识 / 代码 commit | `xray-v26.7.11-yz.1` / `342ceb5305af5df557fd85264a3157de84d233c5` |

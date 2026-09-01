@@ -75,7 +75,7 @@ func NewMultiServer(ctx context.Context, config *MultiUserServerConfig) (*MultiU
 	if err != nil {
 		return nil, errors.New("parse config").Base(err)
 	}
-	service, err := shadowaead_2022.NewMultiService[int](config.Method, psk, 500, inbound, nil)
+	service, err := shadowaead_2022.NewMultiService[int](config.Method, psk, 500, inbound, timeFuncFromContext(ctx))
 	if err != nil {
 		return nil, errors.New("create service").Base(err)
 	}
