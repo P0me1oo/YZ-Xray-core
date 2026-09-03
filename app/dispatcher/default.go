@@ -182,6 +182,28 @@ func (d *DefaultDispatcher) getLink(ctx context.Context) (*transport.Link, *tran
 				}
 			}
 		}
+		// VLESS 中转路由会在会话中保留认证用户和路由编号，单独统计二者组合，
+		// 供 Node 上报用户-落地归属流量，同时不改变原有用户计数器。
+		if route := sessionInbound.VlessRoute; route > 0 {
+			if p.Stats.UserUplink {
+				name := relayUserCounterName(user.Email, route, "uplink")
+				if c, _ := d.stats.GetOrRegisterCounter(name); c != nil {
+					inboundLink.Writer = &SizeStatWriter{
+						Counter: c,
+						Writer:  inboundLink.Writer,
+					}
+				}
+			}
+			if p.Stats.UserDownlink {
+				name := relayUserCounterName(user.Email, route, "downlink")
+				if c, _ := d.stats.GetOrRegisterCounter(name); c != nil {
+					outboundLink.Writer = &SizeStatWriter{
+						Counter: c,
+						Writer:  outboundLink.Writer,
+					}
+				}
+			}
+		}
 		outboundLink.Writer = applyBandwidthLimit(ctx, outboundLink.Writer, d.bandwidth, user)
 
 		if p.Stats.UserOnline {
@@ -210,7 +232,7 @@ func WrapLink(ctx context.Context, policyManager policy.Manager, statsManager st
 		if p.Stats.UserUplink {
 			name := "user>>>" + user.Email + ">>>traffic>>>uplink"
 			if c, _ := statsManager.GetOrRegisterCounter(name); c != nil {
-				link.Reader.(*buf.TimeoutWrapperReader).Counter = c
+				attachReaderCounter(link.Reader.(*buf.TimeoutWrapperReader), c)
 			}
 		}
 		if p.Stats.UserDownlink {
@@ -222,6 +244,23 @@ func WrapLink(ctx context.Context, policyManager policy.Manager, statsManager st
 				}
 			}
 		}
+		if route := sessionInbound.VlessRoute; route > 0 {
+			if p.Stats.UserUplink {
+				name := relayUserCounterName(user.Email, route, "uplink")
+				if c, _ := statsManager.GetOrRegisterCounter(name); c != nil {
+					attachReaderCounter(link.Reader.(*buf.TimeoutWrapperReader), c)
+				}
+			}
+			if p.Stats.UserDownlink {
+				name := relayUserCounterName(user.Email, route, "downlink")
+				if c, _ := statsManager.GetOrRegisterCounter(name); c != nil {
+					link.Writer = &SizeStatWriter{
+						Counter: c,
+						Writer:  link.Writer,
+					}
+				}
+			}
+		}
 		link.Writer = applyBandwidthLimit(ctx, link.Writer, bandwidthManager, user)
 		if p.Stats.UserOnline {
 			trackOnlineIP(ctx, statsManager, user.Email, sessionInbound.Source.Address.String())
@@ -229,6 +268,39 @@ func WrapLink(ctx context.Context, policyManager policy.Manager, statsManager st
 	}
 
 	return link
+}
+
+func relayUserCounterName(email string, route net.Port, direction string) string {
+	return "user>>>" + email + ">>>relay>>>" + route.String() + ">>>traffic>>>" + direction
+}
+
+func attachReaderCounter(reader *buf.TimeoutWrapperReader, counter stats.Counter) {
+	if reader.Counter == nil {
+		reader.Counter = counter
+		return
+	}
+	reader.Counter = &combinedCounter{first: reader.Counter, second: counter}
+}
+
+type combinedCounter struct {
+	first  stats.Counter
+	second stats.Counter
+}
+
+func (c *combinedCounter) Value() int64 {
+	return c.first.Value()
+}
+
+func (c *combinedCounter) Set(value int64) int64 {
+	previous := c.first.Set(value)
+	c.second.Set(value)
+	return previous
+}
+
+func (c *combinedCounter) Add(value int64) int64 {
+	previous := c.first.Add(value)
+	c.second.Add(value)
+	return previous
 }
 
 func trackOnlineIP(ctx context.Context, sm stats.Manager, email, ip string) {
