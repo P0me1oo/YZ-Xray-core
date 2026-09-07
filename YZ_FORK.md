@@ -77,12 +77,22 @@ go test -mod=readonly -count=1 ./common/buf ./core ./app/dispatcher ./app/stats/
 新增计数回归覆盖显式刷新、自动刷新、普通字节写入、部分写入及失败、重复刷新、单个和多个缓冲区写入，以及未启用计数器的路径。
 
 Node 的单独验证副本基于上表开发起点，带入 HY2 Xray 适配、运行测试和公共中转校验文件，通过临时 `validation.mod` 指向本地核心。
+修复提交 `0de309feb5f4b949c4954914fa61ecd4935bbb8e` 推送后，再将验证依赖固定为远程 `github.com/P0me1oo/YZ-Xray-core v0.0.0-20260907143825-0de309feb5f4`，核对模块来源与校验值，并通过同一组测试。
 以下 Xray 包测试通过，包含原生 HY2 客户端访问 Shadowsocks/VLESS 落地、TCP/UDP、Salamander、用户变更、重载和恢复，以及各类流量累计断言：
 
 ```text
 go test -modfile validation.mod -mod=readonly -p 2 -count=1 -tags "with_quic with_utls with_wireguard with_acme with_clash_api" ./internal/kernel/xray -timeout 120s
 ```
 
-`linux/amd64`、`linux/arm64` 和 `windows/amd64` 编译通过，Windows 版本命令确认上游版本 `26.7.11` 与 fork 构建标识 `v26.7.11-yz.4-dev`。
-开发构建已检查实际架构、`CGO_ENABLED=0` 和 VCS 来源；消费者固定远程提交后仍应核对模块解析和运行测试。
+`linux/amd64`、`linux/arm64` 和 `windows/amd64` 编译通过，Windows 版本命令确认上游版本 `26.7.11` 与 fork 构建标识 `v26.7.11-yz.4-0de309fe`。
+该提交的构建已核对实际架构、`CGO_ENABLED=0`、`vcs.revision=0de309feb5f4b949c4954914fa61ecd4935bbb8e` 和 `vcs.modified=false`；构建校验值随独立验证记录保存。
 本次未执行 Linux 运行测试；当前环境未启用 CGO，未执行 race 检查。所有 Node 转发测试监听均使用回环地址。
+
+## `yz.4` CI 修正
+
+首次推送后的 Build and Release 在资源缓存缺失时调用资源更新工作流，被 GitHub 以缺少 `actions: write` 权限拒绝。
+同批全量测试的 `app/router`、`common/geodata`、`infra/conf` 和 Windows 7 打包均因缺少 GeoIP/GeoSite 资源失败。
+本次为 `release.yml` 的 `check-assets` 作业单独授予触发工作流所需的权限，使原有资源准备流程能够执行；后续 CI 仍按原规则校验资源和运行完整测试。
+
+`app/dispatcher/relay_user_test.go` 补齐已有方法之间的空行，满足 CI 使用的 gofumpt `v0.11.0` 格式要求。
+该修正与资源权限修正不改变核心统计实现；最终 CI 结果以消费者固定提交对应的工作流记录为准。

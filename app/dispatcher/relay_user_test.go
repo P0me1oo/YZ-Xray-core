@@ -14,6 +14,7 @@ func (c *relayTestCounter) Set(value int64) int64 {
 	c.value = value
 	return previous
 }
+
 func (c *relayTestCounter) Add(value int64) int64 {
 	c.value += value
 	return c.value - value
