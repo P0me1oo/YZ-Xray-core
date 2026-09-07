@@ -2,6 +2,8 @@ package singbridge
 
 import (
 	"context"
+	"io"
+	"sync"
 	"time"
 
 	B "github.com/sagernet/sing/common/buf"
@@ -33,14 +35,20 @@ type PacketConnWrapper struct {
 	buf.Reader
 	buf.Writer
 	net.Conn
-	Dest   net.Destination
-	cached buf.MultiBuffer
+	Dest        net.Destination
+	readAccess  sync.Mutex
+	cacheAccess sync.Mutex
+	cached      buf.MultiBuffer
+	readErr     error
+	closed      bool
 
 	// A simple patch to avoid goroutine leak since sing infra cannot awake read block by write err
 	T *signal.ActivityTimer
 }
 
 func (w *PacketConnWrapper) ReadPacket(buffer *B.Buffer) (addr M.Socksaddr, err error) {
+	w.readAccess.Lock()
+	defer w.readAccess.Unlock()
 	w.T.Update()
 	defer func() {
 		if err != nil {
@@ -48,39 +56,42 @@ func (w *PacketConnWrapper) ReadPacket(buffer *B.Buffer) (addr M.Socksaddr, err 
 			w.T.SetTimeout(2 * time.Second)
 		}
 	}()
-	if w.cached != nil {
-		mb, bb := buf.SplitFirst(w.cached)
-		if bb == nil {
-			w.cached = nil
-		} else {
-			buffer.Write(bb.Bytes())
-			w.cached = mb
-			var destination net.Destination
-			if bb.UDP != nil {
-				destination = *bb.UDP
-			} else {
-				destination = w.Dest
-			}
-			bb.Release()
-			return ToSocksaddr(destination), nil
-		}
+	w.cacheAccess.Lock()
+	if w.closed {
+		w.cacheAccess.Unlock()
+		return M.Socksaddr{}, io.ErrClosedPipe
 	}
-	mb, err := w.ReadMultiBuffer()
-	nb, bb := buf.SplitFirst(mb)
+	var bb *buf.Buffer
+	w.cached, bb = buf.SplitFirst(w.cached)
+	w.cacheAccess.Unlock()
 	if bb == nil {
-		return M.Socksaddr{}, nil
-	} else {
-		buffer.Write(bb.Bytes())
-		w.cached = nb
-		var destination net.Destination
-		if bb.UDP != nil {
-			destination = *bb.UDP
-		} else {
-			destination = w.Dest
+		if w.readErr != nil {
+			return M.Socksaddr{}, w.readErr
 		}
-		bb.Release()
-		return ToSocksaddr(destination), nil
+		// 阻塞读取不持有缓存锁，关闭可以立即回收已有数据。
+		mb, readErr := w.ReadMultiBuffer()
+		w.cacheAccess.Lock()
+		if w.closed {
+			w.cacheAccess.Unlock()
+			buf.ReleaseMulti(mb)
+			return M.Socksaddr{}, io.ErrClosedPipe
+		}
+		w.cached, bb = buf.SplitFirst(mb)
+		w.readErr = readErr
+		w.cacheAccess.Unlock()
+		if bb == nil {
+			return M.Socksaddr{}, readErr
+		}
 	}
+	defer bb.Release()
+	if _, err = buffer.Write(bb.Bytes()); err != nil {
+		return M.Socksaddr{}, err
+	}
+	destination := w.Dest
+	if bb.UDP != nil {
+		destination = *bb.UDP
+	}
+	return ToSocksaddr(destination), nil
 }
 
 func (w *PacketConnWrapper) WritePacket(buffer *B.Buffer, destination M.Socksaddr) (err error) {
@@ -102,6 +113,10 @@ func (w *PacketConnWrapper) WritePacket(buffer *B.Buffer, destination M.Socksadd
 }
 
 func (w *PacketConnWrapper) Close() error {
+	w.cacheAccess.Lock()
+	defer w.cacheAccess.Unlock()
+	w.closed = true
 	buf.ReleaseMulti(w.cached)
+	w.cached = nil
 	return nil
 }
