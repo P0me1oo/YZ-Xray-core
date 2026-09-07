@@ -18,6 +18,15 @@ type BufferToBytesWriter struct {
 	cache   [][]byte
 }
 
+// Write 在缓冲区刷新和普通字节写入时按实际写入量更新统计。
+func (w *BufferToBytesWriter) Write(payload []byte) (int, error) {
+	n, err := w.Writer.Write(payload)
+	if w.counter != nil {
+		w.counter.Add(int64(n))
+	}
+	return n, err
+}
+
 // WriteMultiBuffer implements Writer. This method takes ownership of the given buffer.
 func (w *BufferToBytesWriter) WriteMultiBuffer(mb MultiBuffer) error {
 	defer ReleaseMulti(mb)
