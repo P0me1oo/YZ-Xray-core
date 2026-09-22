@@ -1,13 +1,21 @@
 # YZ-Xray-core 版本说明
 
-当前源码版本为 `v26.7.11-yz.6`，发布使用同名 Tag。本次修改起点为 `dcb690846b525851f0ee8dc47388e110d4600042`，包含 `yz.5` 的 UDP 缓冲同步和 `yz.4` 的缓冲写入统计修复；此前 `v26.7.11-yz.2` Tag 对应 `26b01717dd8d1fd604de5e23e2868fdef59eba2f`。Go 模块消费者应固定到本次修复的完整提交，不能仅使用这里的源码版本说明。
+当前源码版本为 `v26.8.0`，尚未发布。产品版本独立于 Xray 上游版本，不再使用 `-yz.N` 后缀；历史版本保持原名。Go 模块消费者应固定到验证后的完整提交，不能仅使用这里的源码版本说明。
 
 ## 上游基线
 
 - 官方仓库：`XTLS/Xray-core`
-- 官方预发布 Tag：`v26.7.11`
-- Tag 对应 commit：`50231eaff98ccc31b5cbd247a721c16e97fe5ec1`
+- 官方预发布 Tag：`v26.9.9`
+- Tag 对应 commit：`52a412d9e2f5c2a5142b1b4e2ab3771dacb8b120`
 - 同步方式：将固定 Tag 合并到既有 YZ 分支，不跟随持续变化的 `main`
+
+## 本次同步（2026-09-22）
+
+- 修改起点：`b4caa82d6414196565599c19ebc1b53e331349b6`（历史版本 `v26.7.11-yz.6`），原上游基线为 `v26.7.11`。
+- 合入范围：上游 `v26.7.28`、`v26.9.8`、`v26.9.9`，包括路由并发修复、HY2 更新、XHTTP 修复、REALITY 与相关依赖更新；不合入 Tag 之后的开发分支变更。
+- 保留 YZ 用户统计、用户与落地流量归属、动态限速、SS2022 时间服务、缓冲写入统计、XUDP 关闭兼容、UDP 缓冲所有权和 HY2 会话关闭同步补丁。上游仍未包含这些补丁的完整等价实现。
+- 构建要求提升为 Go 1.27，本地验证使用 Go 1.27.1；Node 必须同步工具链及固定依赖后才能使用新核心。
+- 核心验证（2026-09-22，Windows/amd64，Go 1.27.1）：合并后的 `go.mod` 与上游 `v26.9.9` 完全一致；与上游的源码差异仅限 YZ 补丁文件。补齐 `resources/geoip.dat`、`resources/geosite.dat` 后 `go test ./...` 全部包通过，此前中断的 `app/router`、`infra/conf` 亦通过。`testing/scenarios` 的 `TestDomainSniffing` 在全量并行运行时因嗅探超时窗口偶发失败，单独运行该包两次均通过，官方 `v26.9.9` 在同一环境同样通过，判定为负载时序抖动而非合并问题。按仓库存储内容执行 `vformat` 格式检查和 proto 头检查通过；`go vet` 对 `proxy/shadowsocks_2022/outbound.go` 报告的上下文取消函数未调用属上游既有代码，本次不改动。Windows 本地未执行 `-race`。Node 联调、并发检测与目标平台构建结果由 YZboard-Node 的 `YZ_COMPATIBILITY.md` 记录。
 
 ## YZ 补丁
 
@@ -25,7 +33,7 @@ SS2022 时间补丁只改变 Shadowsocks 2022 构造器使用的时间函数。�
 
 该补丁用于满足 YZboard-Node `v1.13-yz.16` 的前置 SS2022 出站、落地 SS2022 入站和用户-落地流量归属需求。若后续 Xray 上游原生支持这些能力，可以删除对应补丁并恢复上游实现。
 
-## `yz.6` HY2 UDP 会话关闭同步
+## 历史补丁：`yz.6` HY2 UDP 会话关闭同步
 
 Node 发布前完整并发测试在 `TestHysteria2RelayRuntime/salamander=false` 发现另一处关闭状态竞争：`udpSessionManager.run` 持有管理器锁写入 `closed`，定时清理任务却在加锁前读取它，见 [失败记录](https://github.com/P0me1oo/YZboard-Node/actions/runs/34155848942)。同一文件中，单个 `InterConn` 的写入与关闭也读写未同步的关闭标志。
 
@@ -66,12 +74,12 @@ YZboard-Node 的 HY2 前置入口测试使用原生客户端分别访问 Shadows
 
 ## 发布与依赖约定
 
-- Xray 二进制 Release 使用 `v<上游版本>-yz.N` Tag，本次版本为 `v26.7.11-yz.6`；
-- 不创建或覆盖官方 `v26.7.11` Tag；
+- 后续 Xray 二进制 Release 使用独立的三段语义版本 Tag，本次源码版本为 `v26.8.0`；
+- 不创建或覆盖官方 Tag，也不改名或覆盖历史 YZ Tag；
 - Go 模块消费者固定到明确的 YZ fork commit，并记录生成的 pseudo-version；
-- 同一上游版本继续修订时递增 `yz.N`；同步到新上游版本后从 `yz.1` 重新开始。
+- 产品版本按修改影响递增，上游基线单独记录。
 
-## 三仓库兼容矩阵
+## 历史三仓库兼容矩阵（`v26.7.11-yz.6`）
 
 | 项目 | 固定标识 |
 | --- | --- |
@@ -86,7 +94,7 @@ YZboard-Node 的 HY2 前置入口测试使用原生客户端分别访问 Shadows
 
 YZboard 没有独立的 Xray Tag；面板使用自身版本和代码 commit 回滚。Node 的 Xray `replace` 必须固定到本次修复提交对应的 fork pseudo-version，不得改为 `main` 或其他移动引用。
 
-发布前必须确认 `xray version` 的上游版本为 `26.7.11`，构建信息能够区分 YZ Tag 或 commit，并运行相关单元测试和目标平台构建。
+本次发布前必须确认 `xray version` 的上游版本为 `26.9.9`、YZ 产品版本为 `v26.8.0`，构建信息能够区分 YZ Tag 或 commit，并运行相关单元测试和目标平台构建。
 
 ## `yz.4` 本地验证（2026-09-07）
 
