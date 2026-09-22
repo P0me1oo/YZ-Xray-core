@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/cloudflare/circl/sign/mldsa/mldsa65"
-	"github.com/xtls/reality"
 	"github.com/xtls/xray-core/common/errors"
+	"github.com/xtls/xray-core/third_party/reality"
 	"github.com/xtls/xray-core/transport/internet"
 )
 
