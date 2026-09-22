@@ -1,6 +1,6 @@
 # YZ-Xray-core 版本说明
 
-当前源码版本为 `v26.8.0`，尚未发布。产品版本独立于 Xray 上游版本，不再使用 `-yz.N` 后缀；历史版本保持原名。Go 模块消费者应固定到验证后的完整提交，不能仅使用这里的源码版本说明。
+当前源码版本为 `v26.8.0`，对应提交 `9fcf874e21147978c5117e4832c78b4adadd4320`，已推送并由 YZboard-Node `v1.17.0` 固定消费；尚未创建 fork 的二进制 Release Tag。产品版本独立于 Xray 上游版本，不再使用 `-yz.N` 后缀；历史版本保持原名。Go 模块消费者应固定到验证后的完整提交，不能仅使用这里的源码版本说明。
 
 ## 上游基线
 
@@ -16,6 +16,20 @@
 - 保留 YZ 用户统计、用户与落地流量归属、动态限速、SS2022 时间服务、缓冲写入统计、XUDP 关闭兼容、UDP 缓冲所有权和 HY2 会话关闭同步补丁。上游仍未包含这些补丁的完整等价实现。
 - 构建要求提升为 Go 1.27，本地验证使用 Go 1.27.1；Node 必须同步工具链及固定依赖后才能使用新核心。
 - 核心验证（2026-09-22，Windows/amd64，Go 1.27.1）：合并后的 `go.mod` 与上游 `v26.9.9` 完全一致；与上游的源码差异仅限 YZ 补丁文件。补齐 `resources/geoip.dat`、`resources/geosite.dat` 后 `go test ./...` 全部包通过，此前中断的 `app/router`、`infra/conf` 亦通过。`testing/scenarios` 的 `TestDomainSniffing` 在全量并行运行时因嗅探超时窗口偶发失败，单独运行该包两次均通过，官方 `v26.9.9` 在同一环境同样通过，判定为负载时序抖动而非合并问题。按仓库存储内容执行 `vformat` 格式检查和 proto 头检查通过；`go vet` 对 `proxy/shadowsocks_2022/outbound.go` 报告的上下文取消函数未调用属上游既有代码，本次不改动。Windows 本地未执行 `-race`。Node 联调、并发检测与目标平台构建结果由 YZboard-Node 的 `YZ_COMPATIBILITY.md` 记录。
+- CI 核验（2026-09-22）：合并提交 `9fcf874e21147978c5117e4832c78b4adadd4320` 的「Tests and Checkings」在 ubuntu、macOS、windows 三个运行器全部成功，格式与 proto 头检查通过，「Build and Release」和 Windows 7 构建同样成功，补齐了本机未覆盖的 Linux 全量测试。
+- 消费者固定：YZboard-Node `v1.17.0`（来源 `806a3db3911fc22967f37ce86c85d866c02ab31d`）已发布，`go.mod` 固定为 `github.com/P0me1oo/YZ-Xray-core v0.0.0-20260922055117-9fcf874e2114`，其 CI 的 `-race` 全量测试与双架构构建通过，发布产物核验见 Node 的 `YZ_COMPATIBILITY.md`。
+
+## 当前三仓库兼容矩阵（`v26.8.0`）
+
+| 项目 | 固定标识 |
+| --- | --- |
+| Xray 上游预发布 Tag / commit | `v26.9.9` / `52a412d9e2f5c2a5142b1b4e2ab3771dacb8b120` |
+| YZ-Xray-core 源码版本 / commit | `v26.8.0` / `9fcf874e21147978c5117e4832c78b4adadd4320` |
+| YZ-Xray-core 本次修改起点 | `b4caa82d6414196565599c19ebc1b53e331349b6`（历史版本 `v26.7.11-yz.6`） |
+| YZboard-Node 消费版本 / 来源 | `v1.17.0` / `806a3db3911fc22967f37ce86c85d866c02ab31d` |
+| YZboard-Node 固定的 Xray 模块 | `github.com/P0me1oo/YZ-Xray-core v0.0.0-20260922055117-9fcf874e2114` |
+| 配套 sing-box 请求 / replacement | `v1.14.0` / `github.com/P0me1oo/YZ-sing-box v1.14.0-yz.2` |
+| 构建工具链 | `Go 1.27.1`（`go.mod` 要求 `go 1.27`） |
 
 ## YZ 补丁
 
