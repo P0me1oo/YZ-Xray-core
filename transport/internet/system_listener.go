@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/pires/go-proxyproto"
 	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/common/net"
 )
@@ -166,9 +165,9 @@ func (dl *DefaultListener) Listen(ctx context.Context, addr net.Addr, sockopt *S
 	}
 
 	l, err = callback(lc.Listen(ctx, network, address))
-	if err == nil && sockopt != nil && sockopt.AcceptProxyProtocol {
-		policyFunc := func(upstream net.Addr) (proxyproto.Policy, error) { return proxyproto.REQUIRE, nil }
-		l = &proxyproto.Listener{Listener: l, Policy: policyFunc}
+	if err == nil {
+		// YZ 补丁：按可信转发机名单处理 PROXY 头，见 yz_proxy_protocol.go。
+		l = wrapProxyProtocolListener(l, sockopt != nil && sockopt.AcceptProxyProtocol)
 	}
 	return l, err
 }
