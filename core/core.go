@@ -24,7 +24,7 @@ var (
 )
 
 // YZForkVersion 标识当前 YZ fork 的可回滚补丁版本。
-const YZForkVersion = "v26.9.0"
+const YZForkVersion = "v26.9.1"
 
 var (
 	build    = "Custom"

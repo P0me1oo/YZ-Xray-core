@@ -132,7 +132,7 @@ func (w *tcpWorker) Proxy() proxy.Inbound {
 }
 
 func (w *tcpWorker) Start() error {
-	ctx := context.Background()
+	ctx := w.ctx
 
 	if v, ok := w.proxy.(*hysteria_proxy.Server); ok {
 		ctx = hysteria.ContextWithValidator(ctx, v.HysteriaInboundValidator())
@@ -523,7 +523,7 @@ func (w *dsWorker) Port() net.Port {
 }
 
 func (w *dsWorker) Start() error {
-	ctx := context.Background()
+	ctx := w.ctx
 	hub, err := internet.ListenUnix(ctx, w.address, w.stream, func(conn stat.Connection) {
 		go w.callback(conn)
 	})

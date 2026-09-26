@@ -167,7 +167,7 @@ func (dl *DefaultListener) Listen(ctx context.Context, addr net.Addr, sockopt *S
 	l, err = callback(lc.Listen(ctx, network, address))
 	if err == nil {
 		// YZ 补丁：按可信转发机名单处理 PROXY 头，见 yz_proxy_protocol.go。
-		l = wrapProxyProtocolListener(l, sockopt != nil && sockopt.AcceptProxyProtocol)
+		l = wrapProxyProtocolListener(ctx, l, sockopt != nil && sockopt.AcceptProxyProtocol)
 	}
 	return l, err
 }

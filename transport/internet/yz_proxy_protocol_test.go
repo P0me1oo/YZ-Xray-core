@@ -84,7 +84,7 @@ func yzSetTrusted(t *testing.T, prefixes ...string) {
 	t.Cleanup(func() { internet.SetProxyProtocolTrustedPrefixes(nil) })
 }
 
-func TestYZProxyProtocolEmptyListKeepsUpstreamBehavior(t *testing.T) {
+func TestYZProxyProtocolEmptyListNeverTrustsHeaders(t *testing.T) {
 	internet.SetProxyProtocolTrustedPrefixes(nil)
 
 	// 未开启 acceptProxyProtocol：不解析，头原样作为数据。
@@ -93,10 +93,14 @@ func TestYZProxyProtocolEmptyListKeepsUpstreamBehavior(t *testing.T) {
 		t.Fatalf("plain listener = %+v", got)
 	}
 
-	// 开启 acceptProxyProtocol：沿用上游行为，采用头里的来源。
+	// 旧开关不能在空名单下重新信任所有来源，也不能阻止普通直连。
 	got = yzProxyExchange(t, yzProxyListen(t, true), true)
-	if got.remote != "203.0.113.9" || got.data != yzProxyPayload {
+	if got.remote != "127.0.0.1" || got.data != yzProxyHeader+yzProxyPayload {
 		t.Fatalf("legacy listener = %+v", got)
+	}
+	got = yzProxyExchange(t, yzProxyListen(t, true), false)
+	if got.remote != "127.0.0.1" || got.data != yzProxyPayload {
+		t.Fatalf("direct listener = %+v", got)
 	}
 }
 
@@ -129,7 +133,7 @@ func TestYZProxyProtocolUntrustedSourceCannotSpoof(t *testing.T) {
 
 func TestYZProxyProtocolListAppliesToExistingListener(t *testing.T) {
 	internet.SetProxyProtocolTrustedPrefixes(nil)
-	l := yzProxyListen(t, false)
+	l := yzProxyListen(t, true)
 	if got := yzProxyExchange(t, l, true); got.remote != "127.0.0.1" {
 		t.Fatalf("before update = %+v", got)
 	}
@@ -141,5 +145,33 @@ func TestYZProxyProtocolListAppliesToExistingListener(t *testing.T) {
 	internet.SetProxyProtocolTrustedPrefixes(nil)
 	if got := yzProxyExchange(t, l, true); got.remote != "127.0.0.1" {
 		t.Fatalf("after clear = %+v", got)
+	}
+}
+
+func TestYZProxyProtocolTrustIsPerListenerContext(t *testing.T) {
+	trusted := &internet.ProxyProtocolTrust{}
+	untrusted := &internet.ProxyProtocolTrust{}
+	trusted.Set([]netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")})
+	untrusted.Set([]netip.Prefix{netip.MustParsePrefix("192.0.2.0/24")})
+	listen := func(policy *internet.ProxyProtocolTrust) net.Listener {
+		t.Helper()
+		ctx := internet.ContextWithProxyProtocolTrust(context.Background(), policy)
+		l, err := internet.ListenSystem(ctx, &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1)}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = l.Close() })
+		return l
+	}
+	first, second := listen(trusted), listen(untrusted)
+	if got := yzProxyExchange(t, first, true); got.remote != "203.0.113.9" || got.data != yzProxyPayload {
+		t.Fatalf("可信实例未读取来源头: %+v", got)
+	}
+	if got := yzProxyExchange(t, second, true); got.remote != "127.0.0.1" || got.data != yzProxyHeader+yzProxyPayload {
+		t.Fatalf("另一实例错误地沿用可信名单: %+v", got)
+	}
+	trusted.Set(nil)
+	if got := yzProxyExchange(t, first, true); got.remote != "127.0.0.1" {
+		t.Fatalf("清空名单后旧监听仍信任来源头: %+v", got)
 	}
 }

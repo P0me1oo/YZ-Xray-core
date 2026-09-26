@@ -1,6 +1,7 @@
 package internet
 
 import (
+	"context"
 	"net/netip"
 	"sync/atomic"
 
@@ -15,11 +16,26 @@ import (
 // 伪造的头会被当作普通数据而认证失败，无法冒充来源地址。
 //
 // 名单由嵌入方（YZboard-Node）在运行时整体替换，已建立的监听在下一次接收连接时
-// 使用新名单，无需重载内核。名单为空时保留上游 acceptProxyProtocol 的原有行为。
-var proxyProtocolTrusted atomic.Pointer[[]netip.Prefix]
+// 使用新名单，无需重载内核。名单为空时不信任任何来源，旧开关不扩大信任范围。
+type ProxyProtocolTrust struct {
+	trusted atomic.Pointer[[]netip.Prefix]
+}
+
+type proxyProtocolTrustContextKey struct{}
+
+// ContextWithProxyProtocolTrust 把单个 Xray 实例的名单交给该实例创建的监听。
+func ContextWithProxyProtocolTrust(ctx context.Context, trust *ProxyProtocolTrust) context.Context {
+	return context.WithValue(ctx, proxyProtocolTrustContextKey{}, trust)
+}
+
+var defaultProxyProtocolTrust ProxyProtocolTrust
 
 // SetProxyProtocolTrustedPrefixes 整体替换可信转发机名单，传空表示清空。
 func SetProxyProtocolTrustedPrefixes(prefixes []netip.Prefix) {
+	defaultProxyProtocolTrust.Set(prefixes)
+}
+
+func (t *ProxyProtocolTrust) Set(prefixes []netip.Prefix) {
 	list := make([]netip.Prefix, 0, len(prefixes))
 	for _, prefix := range prefixes {
 		if !prefix.IsValid() {
@@ -32,21 +48,22 @@ func SetProxyProtocolTrustedPrefixes(prefixes []netip.Prefix) {
 		list = append(list, netip.PrefixFrom(addr, bits).Masked())
 	}
 	if len(list) == 0 {
-		proxyProtocolTrusted.Store(nil)
+		t.trusted.Store(nil)
 		return
 	}
-	proxyProtocolTrusted.Store(&list)
+	t.trusted.Store(&list)
 }
 
 // proxyProtocolPolicy 决定单个连接如何处理 PROXY 头。
-//   - 名单为空：沿用上游行为，开启 acceptProxyProtocol 时要求所有连接携带头，否则不解析；
+//   - 名单为空：不解析任何来源的头，旧 acceptProxyProtocol 开关不扩大信任范围；
 //   - 名单非空：名单内来源可选携带头，名单外来源不解析，与是否开启 acceptProxyProtocol 无关。
-func proxyProtocolPolicy(upstream net.Addr, legacyRequire bool) proxyproto.Policy {
-	list := proxyProtocolTrusted.Load()
+func proxyProtocolPolicy(upstream net.Addr, _ bool) proxyproto.Policy {
+	return defaultProxyProtocolTrust.policy(upstream)
+}
+
+func (t *ProxyProtocolTrust) policy(upstream net.Addr) proxyproto.Policy {
+	list := t.trusted.Load()
 	if list == nil {
-		if legacyRequire {
-			return proxyproto.REQUIRE
-		}
 		return proxyproto.SKIP
 	}
 	tcp, ok := upstream.(*net.TCPAddr)
@@ -64,11 +81,15 @@ func proxyProtocolPolicy(upstream net.Addr, legacyRequire bool) proxyproto.Polic
 
 // wrapProxyProtocolListener 给流式监听加上按来源判断的 PROXY 头处理。
 // SKIP 直接返回原始连接，名单外的直连用户不经过任何额外包装。
-func wrapProxyProtocolListener(l net.Listener, legacyRequire bool) net.Listener {
+func wrapProxyProtocolListener(ctx context.Context, l net.Listener, legacyRequire bool) net.Listener {
+	trust, _ := ctx.Value(proxyProtocolTrustContextKey{}).(*ProxyProtocolTrust)
+	if trust == nil {
+		trust = &defaultProxyProtocolTrust
+	}
 	return &proxyproto.Listener{
 		Listener: l,
 		ConnPolicy: func(options proxyproto.ConnPolicyOptions) (proxyproto.Policy, error) {
-			return proxyProtocolPolicy(options.Upstream, legacyRequire), nil
+			return trust.policy(options.Upstream), nil
 		},
 	}
 }
