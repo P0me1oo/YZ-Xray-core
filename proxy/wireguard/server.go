@@ -296,6 +296,8 @@ func (s *Server) Start() error {
 			})
 		},
 	}
+	// 设备构造会启动收包线程；必须先完成 TCP 和 UDP 转发处理的初始化。
+	createForwarder(s.stack, s.HandleConnection)
 	dev := device.NewDevice(s.tun, bind, logger)
 	var cfg strings.Builder
 	cfg.WriteString("private_key=" + s.conf.SecretKey + "\n")
@@ -322,7 +324,6 @@ func (s *Server) Start() error {
 		return err
 	}
 	s.dev = dev
-	createForwarder(s.stack, s.HandleConnection)
 	return nil
 }
 
