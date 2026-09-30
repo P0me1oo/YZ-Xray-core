@@ -8,7 +8,11 @@
 - 核心只将转发器初始化移到 WG 设备构造之前，保证所有后台收包开始前网络栈已准备好；前置端的 `v26.9.2` 同步修复保留，不改面板业务、路由或认证。
 - 新回归在收包设备首次访问 TUN 时注入 UDP 首包，断言正确目的地址及完整负载到达出站分发，并检查重复启动复用设备。旧代码确定失败，修复后重测；CI 仍对整个 WG 包执行十轮竞态检测，Node 继续运行完整双核心链路。
 - 上游仍为 `v26.9.9` / `52a412d9e2f5c2a5142b1b4e2ab3771dacb8b120`。删除条件：上游同样保证转发器先于收包设备初始化，且通过启动首包与 Node 双核心竞态回归。
-- 发布准备中，最终来源及完整验证结果完成后追加。
+- 发布来源：`7c5728ec7d0f6deb2facac71f4187bbd76acbb6f`，[Release v26.9.3](https://github.com/P0me1oo/YZ-Xray-core/releases/tag/v26.9.3) 已发布。源提交的 [完整检查 36665188560](https://github.com/P0me1oo/YZ-Xray-core/actions/runs/36665188560) 中，十轮 WG 竞态、REALITY 互通、Windows／Linux／macOS 全量测试、格式和 proto 检查全部通过，多平台构建也通过。
+- 64 个 Release 附件全部下载并匹配 GitHub SHA256，32 个 ZIP 均通过自身完整性及配套 `.dgst` 的 SHA256 校验。Linux amd64／arm64 与 Windows amd64 的实际程序架构、CGO 关闭和内嵌短来源 `7c5728e` 已核对；Windows 程序运行输出为上游 `26.9.9`、短来源 `7c5728e`、Go `1.27.1`。既有核心发布流程使用 `-buildvcs=false`，程序不含完整 VCS revision／dirty 元数据，完整来源由固定 Git Tag 和 Release 工作流核对，不将缺失元数据写成已验证。
+- Linux ZIP SHA256：amd64 `4f50d06e25b7aa37164049118b74d484456246f9c9ddc374dc6e8ca1b4988d41`，arm64 `31466fcf8c74b95d02377050cff1d961c530e568f3e09a8e27fe47bec13b977a`。
+- 独立镜像 `ghcr.io/p0me1oo/yz-xray-core:26.9.3`、`latest`、`pre-release` 均为 `sha256:0d66b79cd6ad1e87eaa8c933fe9ba2914a1fee4beabdf84aaff0e3d6fdff775b`，九种 Linux 平台均已核对；其中 amd64 为 `sha256:c5b809b584ed48889b33c551b1b730d0335168c267ec952b54233f159e4fe4d6`，arm64 为 `sha256:63d60d4e7ca11497590c662230ebcae35ff0116319baa3fc59c43a1023b0b4e0`。既有核心镜像不写 OCI revision，来源通过成功的固定标签 [镜像工作流 36666935719](https://github.com/P0me1oo/YZ-Xray-core/actions/runs/36666935719) 核对，不声称镜像配置含完整来源标签。
+- YZ-Agent [v1.26.1](https://github.com/P0me1oo/YZ-Agent/releases/tag/v1.26.1)（`1ab30205c95cca8d89cedd9e597d819eb73851c8`）固定消费 `v0.0.0-20260930033643-7c5728ec7d0f`，完整 Linux 竞态、双架构构建、镜像运行版本和 12 个附件核验通过。配套面板 `1.33.0`；Node 产物包含本核心，服务器无需另装 Xray。
 
 ## `v26.9.2` WireGuard 初始化顺序
 
@@ -16,7 +20,7 @@
 - 修复范围：只调整 `proxy/wireguard/client.go` 的初始化同步。创建 WireGuard 设备前持有连接层 `Open` 使用的同一把锁，写完全部回调和保留字节后释放，不改路由、认证、流量或面板业务。
 - 新增回归使用创建时已排队的启用事件，覆盖初始化、重复启用、关闭后拒绝重新初始化；凭据在内存中随机生成，仅使用回环监听。CI 对 WG 包重复执行十次竞态检测，Node 继续运行八种实际链路组合。
 - 上游基线仍为 `v26.9.9` / `52a412d9e2f5c2a5142b1b4e2ab3771dacb8b120`，其他兼容补丁与依赖不变。删除条件：上游修复同一初始化顺序，并通过提前启用事件和 Node 双核心链路的竞态回归后，可删除本补丁。
-- 发布准备中，验证结果、最终来源与 Node 固定依赖在完成后追加。
+- 本版已发布，来源 `51c3601eabc14df1202ef8a928bcf8b6a9ce2922`；64 个附件、32 个 ZIP 校验通过，镜像 `ghcr.io/p0me1oo/yz-xray-core:26.9.2` 为 `sha256:700acb2c4d5da87adb74b29d0cca06d6c52fd019c8890ab01d8e4f2a84f9e273`，九种 Linux 平台已核对。本版仅修复前置初始化；Node 后续完整检测发现落地端另一个问题，WG 落地使用上节 `v26.9.3`，保留本版历史产物。
 
 ## `v26.9.1` 空名单不恢复全来源信任
 
