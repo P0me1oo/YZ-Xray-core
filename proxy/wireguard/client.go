@@ -338,11 +338,15 @@ func (h *Handler) init(ctx context.Context) error {
 			})
 		},
 	}
+	// NewDevice 会立即启动事件线程；先持有 Open 使用的锁，
+	// 保证所有连接回调写完后，后台线程才能打开监听。
+	bind.mu.Lock()
 	dev := device.NewDevice(h.tun, bind, logger)
 	bind.resolveFunc = resolveFunc
 	bind.listenFunc = listenFunc
 	bind.downFunc = dev.Down
 	bind.reserved = h.conf.Reserved
+	bind.mu.Unlock()
 	var cfg strings.Builder
 	cfg.WriteString("private_key=" + h.conf.SecretKey + "\n")
 	for _, peer := range h.conf.Peers {

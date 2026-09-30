@@ -6,6 +6,18 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
+  wireguard-race:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: 检查 WireGuard 初始化、重复启用和关闭的并发安全
+        run: go test -race -count=10 -timeout 5m ./proxy/wireguard
+
   reality-interop:
     runs-on: ubuntu-latest
     permissions:
