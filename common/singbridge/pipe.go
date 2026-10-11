@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/sagernet/sing/common/bufio"
@@ -23,12 +24,25 @@ func CopyConn(ctx context.Context, inboundConn net.Conn, link *transport.Link, s
 	} else {
 		conn.R = &buf.BufferedReader{Reader: link.Reader}
 	}
-	cancel := func() {
-		common.Interrupt(link.Reader)
-		common.Interrupt(serverConn)
-	}
+	cancel := bridgeCleanup(link, serverConn)
+	stopCancel := context.AfterFunc(ctx, cancel)
+	defer stopCancel()
 	conn.T = signal.CancelAfterInactivity(ctx, cancel, 300*time.Second)
+	// 复制结束也必须释放链路；不能只等空闲定时器关闭底层连接。
+	defer conn.T.SetTimeout(0)
 	return ReturnError(bufio.CopyConn(ctx, conn, serverConn))
+}
+
+// 超时与复制结束共用一次清理，确保嵌入方的连接关闭回调得到执行。
+func bridgeCleanup(link *transport.Link, serverConn interface{}) func() {
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			common.Interrupt(link.Reader)
+			common.Interrupt(link.Writer)
+			common.Interrupt(serverConn)
+		})
+	}
 }
 
 type PipeConnWrapper struct {

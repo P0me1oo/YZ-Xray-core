@@ -9,7 +9,6 @@ import (
 	B "github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/bufio"
 	M "github.com/sagernet/sing/common/metadata"
-	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/buf"
 	"github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/signal"
@@ -17,10 +16,9 @@ import (
 )
 
 func CopyPacketConn(ctx context.Context, inboundConn net.Conn, link *transport.Link, destination net.Destination, serverConn net.PacketConn) error {
-	cancel := func() {
-		common.Interrupt(link.Reader)
-		common.Interrupt(serverConn)
-	}
+	cancel := bridgeCleanup(link, serverConn)
+	stopCancel := context.AfterFunc(ctx, cancel)
+	defer stopCancel()
 	conn := &PacketConnWrapper{
 		Reader: link.Reader,
 		Writer: link.Writer,
@@ -28,6 +26,7 @@ func CopyPacketConn(ctx context.Context, inboundConn net.Conn, link *transport.L
 		Conn:   inboundConn,
 		T:      signal.CancelAfterInactivity(ctx, cancel, 300*time.Second),
 	}
+	defer conn.T.SetTimeout(0)
 	return ReturnError(bufio.CopyPacketConn(ctx, conn, bufio.NewPacketConn(serverConn)))
 }
 
