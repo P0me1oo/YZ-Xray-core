@@ -1,8 +1,8 @@
 # YZ-Xray-core 版本说明
 
-当前开发版本为 `v26.9.4`（SS2022 连接释放修复，尚未发布），保留 `v26.9.3` 及之前的兼容修复。产品版本独立于 Xray 上游版本；历史版本保持原名。Go 模块消费者应固定到验证后的完整提交。
+当前发布版本为 `v26.9.4`（SS2022 连接释放修复），保留 `v26.9.3` 及之前的兼容修复。产品版本独立于 Xray 上游版本；历史版本保持原名。Go 模块消费者应固定到验证后的完整提交。
 
-## `v26.9.4` SS2022 连接释放（未发布）
+## `v26.9.4` SS2022 连接释放（已发布）
 
 - 修改起点：`40b6b47d69c646ea4132f0f2be374419981db834`；上游基线仍为 `v26.9.9` / `52a412d9e2f5c2a5142b1b4e2ab3771dacb8b120`。
 - Node 需求：SS2022 连接结束后，归还连接计数和在线来源，避免旧来源被持续作为新快照上报。
@@ -12,7 +12,11 @@
 - 删除条件：上游桥接实现等价的链路释放，且通过核心回归和 Node 在线来源归零验证。
 - 本地验证（Windows）：`go test ./common/singbridge ./proxy/shadowsocks_2022 ./core` 通过；桥接包重复 10 轮通过。以 Node v2.9.0 的固定提交 `3b63709439d1923ef1c48c6e767a55137c1c0cda` 在隔离目录临时替换核心，原 SS2022 残留用例连续 3 轮均归零。未执行竞态检测、完整协议互通或服务器测试；Node 当前工作区的既有循环依赖不在本次修复范围。
 - 发布限制：本地核心修改不会自动进入 Node；正式交付仍需固定新核心提交、更新 Node 依赖并构建发布。本次不修改服务器。
-- `2026-10-11` 接续发布：保留上述已有修复，Node `v2.10.0` 修正了通知开发中的循环依赖，配套面板 `1.62.0`。旧固定核心下的 Node 回归仍复现连接和来源各残留一条；本次按核心、Node、面板的依赖关系补做竞态和正式流程验证，结果随后补录。
+- `2026-10-11` 发布来源为 `77d29e684aed88a4dba02e9e51cd63b83d5a3d4b`，[Release v26.9.4](https://github.com/P0me1oo/YZ-Xray-core/releases/tag/v26.9.4) 已发布。Node 配套版本为 `v2.10.1`，面板为 `1.62.0`；Node `v2.10.0` 因普通 WG 端口占用回归失败未交付，该问题不在本核心中。
+- 本机 Windows 桥接包和 SS2022 包连续三轮竞态测试通过；同一命令的 `./core` 包在 `TestXrayDial` 的 10 MiB 数据比对中达到五分钟超时，整条命令记为失败，未修改该测试。Node 固定新核心后的 Xray 整包竞态通过（28.830 秒），包含原 SS2022 来源与连接归零断言；旧核心在隔离基线上仍可复现各残留一条。
+- [完整检查 38108190100](https://github.com/P0me1oo/YZ-Xray-core/actions/runs/38108190100) 的 Windows、Linux、macOS 全量测试、十轮 WG 竞态、REALITY 互通、格式和 proto 检查全部通过；[正式构建 38108980329](https://github.com/P0me1oo/YZ-Xray-core/actions/runs/38108980329) 与 Windows 7 构建 `38108980312` 通过。
+- 64 个附件全部下载并与 GitHub SHA256、大小一致，32 个 ZIP 的内部完整性及配套摘要全部通过。Linux amd64、arm64 和 Windows amd64 程序的实际架构、CGO 关闭与短来源 `77d29e6` 已核对；Windows 输出为上游 `26.9.9`、Go `1.27.2`。原构建使用 `-buildvcs=false`，没有完整 VCS revision 或 dirty 信息，完整来源由固定 Tag 和工作流核验。
+- [镜像流程 38108980437](https://github.com/P0me1oo/YZ-Xray-core/actions/runs/38108980437) 通过。`ghcr.io/p0me1oo/yz-xray-core:26.9.4`、`latest` 和 `pre-release` 均为 `sha256:bdaaa6513328fecf6b053af17e9c65b30ad6e22f139fb6c0f69ebfbfc34ef77a`，九种 Linux 平台与各 20 层均已匿名核验；amd64 清单为 `sha256:fbf7711646f46089c02eb2b9dba821d45909633c0f6b7ed676cd864ec8a98e6f`，arm64 为 `sha256:c785c6e7296c87dd6ab7807a8baa254be17bdfb9a7b62598520eedac95c2bbff`。既有核心镜像没有 OCI revision 标签，来源以固定标签流程核对。
 
 ## `v26.9.3` WireGuard 落地启动顺序
 
