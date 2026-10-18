@@ -80,7 +80,7 @@ func Start(t testing.TB, hybridTarget bool) *Server {
 	dialer := &net.Dialer{Timeout: 5 * time.Second}
 	s.Config = &reality.Config{
 		DialContext: dialer.DialContext, Type: "tcp", Dest: target.Addr().String(),
-		PrivateKey: privateKey.Bytes(), ServerNames: map[string]bool{"reality.test": true},
+		PrivateKey: privateKey, ServerNames: map[string]bool{"reality.test": true},
 		ShortIds: map[[8]byte]bool{s.ShortID: true}, MaxTimeDiff: time.Minute,
 		SessionTicketsDisabled: true,
 	}

@@ -1,6 +1,27 @@
 # YZ-Xray-core 版本说明
 
-当前发布版本为 `v26.9.4`（SS2022 连接释放修复），保留 `v26.9.3` 及之前的兼容修复。产品版本独立于 Xray 上游版本；历史版本保持原名。Go 模块消费者应固定到验证后的完整提交。
+本次发布版本为 `v26.10.0`，同步 Xray 上游 `v26.10.17`。产品版本独立于 Xray 上游版本；历史版本保持原名。Go 模块消费者应固定到验证后的完整提交，Node 配套版本为 `v2.19.0`。发布状态、固定来源和验证结果在发布完成后补记。
+
+## `v26.10.0` 上游同步（2026-10-18）
+
+- 修改起点：`c1af3aca4da4b0f4b8896ce7aa5da65352dd0909`；原上游基线为 `v26.9.9` / `52a412d9e2f5c2a5142b1b4e2ab3771dacb8b120`。
+- 固定上游：[预发布 v26.10.17](https://github.com/XTLS/Xray-core/releases/tag/v26.10.17)，提交 `92ccc939aaf4f8965f369cf0b142e005aeaa11d5`。在既有 YZ 分支合并该 Tag，不包含 Tag 之后的开发提交。
+- 上游范围：379 个文件，包含原生 SS2022、WireGuard 内置网络栈、传输层 Finalmask 调整、MASQUE、XDRIVE、DNS/路由 Lua、TLS 内置根证书及依赖更新。保留上游对 Lua 内联脚本的限制。
+- 保留用户及落地流量统计、限速、XUDP 关闭、缓冲写入统计、HY2 身份与会话同步、实例级 PROXY 信任名单。上游未提供这些 Node 需求的完整等价实现。
+- SS2022 时间服务迁移到原生 TCP/UDP 编解码；入站、多人入站和出站继续从实例上下文读取 `ntp.TimeService`，仅改变协议时间戳，不改变系统时间、网络超时或重放缓存有效期。未注册时使用系统时间。上游提供同等实例时间注入并通过偏差与重连测试后可删除。
+- SS2022 连接释放迁移到原生实现。对照测试发现 TCP 正常断开未中断全部链路，UDP 并发关闭会重复调用释放；补回 TCP 完成及首包写入失败的链路清理、UDP 一次性释放。原 `common/singbridge` 已无调用方，随上游删除；断开、取消、并发重复关闭的回归迁移至 `proxy/shadowsocks_2022`。原桥接私有缓存已不存在，数据报顺序和目标保留由原生 UDP 测试及 Node 双核心联调覆盖。上游提供等价清理并通过 Node 来源归零测试后可删除释放补丁。
+- WireGuard 两处旧启动顺序补丁退役：上游在前置启用前阻止提前启用事件，落地在网络栈构造时绑定转发处理。保留并迁移提前启用、启动首包、重复启用、关闭后拒绝启用的回归。
+- REALITY 副本同步到 `83f621788ca88b83179810b12baa7ae518aacb83`，保留传统 X25519 与混合握手认证兼容；密钥对象改为上游的新接口。原因及删除条件见 [底层兼容副本](third_party/README.zh.md)。
+- Node 适配使用核心账户转换接口处理 SS2022 解码后的密钥，避免直接依赖内部表示；释放回归改走真实 SS2022 握手。面板协议及 sing-box 源码无需修改。此前本地联调使用临时 `../YZ-Xray-core` 替换；Node `v2.19.0` 将正式依赖固定到本次可获取的完整提交，版本输出同步标识上游与实际 fork。
+- Go 模块仍要求 `go 1.27`。正式验证沿用现有多平台完整测试、格式和生成文件检查、REALITY 互通、WG 竞态，并增加 SS2022 时间校准、连接释放及 HY2 竞态检查。未操作服务器。
+
+本地验证使用 Windows/amd64、Go `1.27.0`：
+
+- `go test -mod=readonly -p 1 -count=1 -timeout 10m ./...`：96 个含测试的包通过，82 个包无测试；`app/dns` 的 `TestQUICNameServer` 和 `transport/internet/tls` 的 `TestECHDial` 失败。前者无法从外部 QUIC DNS 获得记录，后者无法从外部 DNS 获得有效 ECH 配置。同一环境、未修改的官方 `v26.10.17` 对这两个用例复测同样失败，因此完整回归记为未通过，不修改或跳过断言。较早一轮的外部 DoH 查询失败未在官方专项复测重现。
+- `go test -mod=readonly -race -p 1 -count=3 -timeout 5m ./proxy/shadowsocks_2022 ./proxy/wireguard ./transport/internet/hysteria ./transport/internet` 全部通过。使用已有 LLVM MinGW，覆盖时间偏差与重连、TCP 断开和取消、UDP 重复关闭、WG 启动与首包、HY2 会话关闭、PROXY 信任名单热更新。
+- `testing/realityinterop` 的 `go test -mod=readonly -tags with_utls -count=1 -timeout 5m ./...` 通过，覆盖 Xray、sing-box、mihomo 的传统和混合握手、数据传输、重连及错误认证。
+- 相对上游有差异的 73 个 Go 文件按 Git 的 LF 内容通过仓库 `vformat` 检查；全部生成协议文件的版本头一致。REALITY 副本按本仓库格式整理，已删除上游不再使用的旧 HPKE 副本。
+- Node 联调与目标平台构建结果以 Node 的 `YZ_COMPATIBILITY.md` 本次记录为准。
 
 ## `v26.9.4` SS2022 连接释放（已发布）
 
@@ -78,11 +99,11 @@
 ## 上游基线
 
 - 官方仓库：`XTLS/Xray-core`
-- 官方预发布 Tag：`v26.9.9`
-- Tag 对应 commit：`52a412d9e2f5c2a5142b1b4e2ab3771dacb8b120`
+- 官方预发布 Tag：`v26.10.17`
+- Tag 对应 commit：`92ccc939aaf4f8965f369cf0b142e005aeaa11d5`
 - 同步方式：将固定 Tag 合并到既有 YZ 分支，不跟随持续变化的 `main`
 
-## 本次同步（2026-09-22）
+## 历史同步（2026-09-22）
 
 - 修改起点：`b4caa82d6414196565599c19ebc1b53e331349b6`（历史版本 `v26.7.11-yz.6`），原上游基线为 `v26.7.11`。
 - 合入范围：上游 `v26.7.28`、`v26.9.8`、`v26.9.9`，包括路由并发修复、HY2 更新、XHTTP 修复、REALITY 与相关依赖更新；不合入 Tag 之后的开发分支变更。
@@ -92,7 +113,7 @@
 - CI 核验（2026-09-22）：合并提交 `9fcf874e21147978c5117e4832c78b4adadd4320` 的「Tests and Checkings」在 ubuntu、macOS、windows 三个运行器全部成功，格式与 proto 头检查通过，「Build and Release」和 Windows 7 构建同样成功，补齐了本机未覆盖的 Linux 全量测试。
 - 消费者固定：YZboard-Node `v1.17.0`（来源 `806a3db3911fc22967f37ce86c85d866c02ab31d`）已发布，`go.mod` 固定为 `github.com/P0me1oo/YZ-Xray-core v0.0.0-20260922055117-9fcf874e2114`，其 CI 的 `-race` 全量测试与双架构构建通过，发布产物核验见 Node 的 `YZ_COMPATIBILITY.md`。
 
-## 当前三仓库兼容矩阵（`v26.8.0`）
+## 历史三仓库兼容矩阵（`v26.8.0`）
 
 | 项目 | 固定标识 |
 | --- | --- |
@@ -161,7 +182,7 @@ YZboard-Node 的 HY2 前置入口测试使用原生客户端分别访问 Shadows
 
 ## 发布与依赖约定
 
-- 后续 Xray 二进制 Release 使用独立的三段语义版本 Tag，本次源码版本为 `v26.8.0`；
+- 后续 Xray 二进制 Release 使用独立的三段语义版本 Tag，当前开发源码版本为 `v26.10.0`；
 - 不创建或覆盖官方 Tag，也不改名或覆盖历史 YZ Tag；
 - Go 模块消费者固定到明确的 YZ fork commit，并记录生成的 pseudo-version；
 - 产品版本按修改影响递增，上游基线单独记录。
@@ -181,7 +202,7 @@ YZboard-Node 的 HY2 前置入口测试使用原生客户端分别访问 Shadows
 
 YZboard 没有独立的 Xray Tag；面板使用自身版本和代码 commit 回滚。Node 的 Xray `replace` 必须固定到本次修复提交对应的 fork pseudo-version，不得改为 `main` 或其他移动引用。
 
-本次发布前必须确认 `xray version` 的上游版本为 `26.9.9`、YZ 产品版本为 `v26.8.0`，构建信息能够区分 YZ Tag 或 commit，并运行相关单元测试和目标平台构建。
+历史 `v26.8.0` 的发布核对要求为：`xray version` 的上游版本为 `26.9.9`、YZ 产品版本为 `v26.8.0`，构建信息能够区分 YZ Tag 或 commit，并运行相关单元测试和目标平台构建。当前版本的基线和验证结果见本文开头。
 
 ## `yz.4` 本地验证（2026-09-07）
 

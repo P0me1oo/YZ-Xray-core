@@ -6,6 +6,18 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
+  ss2022-race:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: 检查原生 SS2022 时间校准、连接释放和 HY2 并发安全
+        run: go test -race -count=3 -timeout 5m ./proxy/shadowsocks_2022 ./transport/internet/hysteria ./transport/internet
+
   wireguard-race:
     runs-on: ubuntu-latest
     permissions:

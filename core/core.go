@@ -19,12 +19,12 @@ import (
 
 var (
 	Version_x byte = 26
-	Version_y byte = 9
-	Version_z byte = 9
+	Version_y byte = 10
+	Version_z byte = 17
 )
 
 // YZForkVersion 标识当前 YZ fork 的可回滚补丁版本。
-const YZForkVersion = "v26.9.4"
+const YZForkVersion = "v26.10.0"
 
 var (
 	build    = "Custom"
