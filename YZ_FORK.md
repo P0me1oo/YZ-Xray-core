@@ -11,8 +11,9 @@
 - 配套 Agent `v2.29.0` 基于 `v2.28.3` 后的文档提交 `000dc0d4498ce23c61c04abe44869e02f3d430aa` 验证。Agent 的模块依赖及构建标识固定到本次同步提交，具体完整提交和模块校验记录见 Agent 兼容矩阵。
 - Linux/amd64、Go `1.27.3` 完整测试通过：100 个测试包成功，81 个包无测试。SS2022、HY2 与监听层三轮竞态、WireGuard 十轮竞态及 REALITY 多客户端互通竞态均通过。
 - 补充 Linux 默认监听回归：设置 `GODEBUG=multipathtcp=1` 后，未配置与空套接字配置仍实际使用普通 TCP。初版测试未处理 YZ 的 PROXY 监听包装，修正测试的套接字访问后整包三轮竞态通过；通过临时源码覆盖移除上游默认关闭调用的对照准确检出 MPTCP，不修改工作区生产源码或降低断言。
-- 全仓格式与 83 份协议生成文件版本头检查通过。Linux amd64、arm64 核心构建通过，核对实际 ELF 架构、Go 版本、`CGO_ENABLED=0`、`-trimpath=true` 和完整 VCS 起点；开发产物如实标记 `vcs.modified=true`，amd64 实际执行输出上游版本 `26.10.31`。未执行 Windows/macOS 回归。
+- 全仓格式与 83 份协议生成文件版本头检查通过。Linux amd64、arm64 核心构建通过，核对实际 ELF 架构、Go 版本、`CGO_ENABLED=0`、`-trimpath=true` 和完整 VCS 起点；开发产物如实标记 `vcs.modified=true`，amd64 实际执行输出上游版本 `26.10.31`。本地未执行 Windows/macOS 回归，固定提交后的多平台结果如下。
 - Agent 的两种 Linux 架构开发构建已核对实际使用本地新核心和固定 YZ-sing-box `v1.15.1`；运行兼容检查和固定依赖验证见 Agent 兼容矩阵。本次交付为源码同步，未发布或部署。
+- 固定源码为 `b56aa7997c7ee6afe79664e13d64984da6a60f1c`，已推送至 `upgrade/xray-v26.10.31`；Go 模块 `v0.0.0-20261031144429-b56aa7997c7e` 已可获取。该提交的[完整检查](https://github.com/P0me1oo/YZ-Xray-core/actions/runs/41211529010)全部通过，包括 Linux、Windows、macOS 全量测试、SS2022/HY2/监听层及 WG 竞态、REALITY 互通、格式和生成文件检查；[多平台构建](https://github.com/P0me1oo/YZ-Xray-core/actions/runs/41211529073)与 [Windows 7 构建](https://github.com/P0me1oo/YZ-Xray-core/actions/runs/41211529035)通过。未创建正式标签或 Release。
 
 ## `v26.10.0` 上游同步（2026-10-18）
 
