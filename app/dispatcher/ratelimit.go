@@ -39,6 +39,7 @@ func (w *RateLimitWriter) RawCopyLimit() int {
 	}
 	return max(1, w.Limiter.Burst())
 }
+
 func (w *RateLimitWriter) BeforeRawCopy(ctx context.Context, n int) error {
 	if w.Limiter == nil {
 		return nil
