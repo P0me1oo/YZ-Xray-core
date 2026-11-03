@@ -59,7 +59,8 @@ func copyRawWithHandlers(ctx context.Context, source net.Conn, destination *net.
 		size := state.chunkSize()
 		err := reader.Read(func(fd uintptr) bool {
 			for {
-				count, syscallErr = unix.Splice(int(fd), nil, pipe[1], nil, size, unix.SPLICE_F_MOVE|unix.SPLICE_F_NONBLOCK)
+				n, spliceErr := unix.Splice(int(fd), nil, pipe[1], nil, size, unix.SPLICE_F_MOVE|unix.SPLICE_F_NONBLOCK)
+				count, syscallErr = int64(n), spliceErr
 				if syscallErr == unix.EINTR {
 					continue
 				}
@@ -90,8 +91,9 @@ func copyRawWithHandlers(ctx context.Context, source net.Conn, destination *net.
 		remaining := count
 		err = writer.Write(func(fd uintptr) bool {
 			for remaining > 0 {
-				var written int64
-				written, syscallErr = unix.Splice(pipe[0], nil, int(fd), nil, int(remaining), unix.SPLICE_F_MOVE|unix.SPLICE_F_NONBLOCK)
+				n, spliceErr := unix.Splice(pipe[0], nil, int(fd), nil, int(remaining), unix.SPLICE_F_MOVE|unix.SPLICE_F_NONBLOCK)
+				written := int64(n)
+				syscallErr = spliceErr
 				if written > 0 {
 					remaining -= written
 					state.written(written)
