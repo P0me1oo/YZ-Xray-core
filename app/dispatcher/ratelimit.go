@@ -30,3 +30,19 @@ func (w *RateLimitWriter) WriteMultiBuffer(mb buf.MultiBuffer) error {
 
 func (w *RateLimitWriter) Close() error { return common.Close(w.Writer) }
 func (w *RateLimitWriter) Interrupt()   { common.Interrupt(w.Writer) }
+
+func (w *RateLimitWriter) UnwrapWriter() buf.Writer        { return w.Writer }
+func (w *RateLimitWriter) RawCopyContext() context.Context { return w.Context }
+func (w *RateLimitWriter) RawCopyLimit() int {
+	if w.Limiter == nil || w.Limiter.Limit() == rate.Inf {
+		return 0
+	}
+	return max(1, w.Limiter.Burst())
+}
+func (w *RateLimitWriter) BeforeRawCopy(ctx context.Context, n int) error {
+	if w.Limiter == nil {
+		return nil
+	}
+	return w.Limiter.WaitN(ctx, n)
+}
+func (w *RateLimitWriter) AfterRawCopy(int64) {}

@@ -6,7 +6,7 @@ func TestYZForkVersionMatchesUpstreamVersion(t *testing.T) {
 	if got := Version(); got != "26.10.31" {
 		t.Fatalf("Version() = %q, want %q", got, "26.10.31")
 	}
-	if YZForkVersion != "v26.11.0" {
-		t.Fatalf("YZForkVersion = %q, want %q", YZForkVersion, "v26.11.0")
+	if YZForkVersion != "v26.11.1" {
+		t.Fatalf("YZForkVersion = %q, want %q", YZForkVersion, "v26.11.1")
 	}
 }

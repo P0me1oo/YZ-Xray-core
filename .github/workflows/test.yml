@@ -17,6 +17,8 @@ jobs:
           go-version-file: go.mod
       - name: 检查原生 SS2022 时间校准、连接释放和 HY2 并发安全
         run: go test -race -count=3 -timeout 5m ./proxy/shadowsocks_2022 ./transport/internet/hysteria ./transport/internet
+      - name: 检查 Vision 快速复制、嵌套计数与限速的并发安全
+        run: go test -race -count=1 -timeout 5m ./proxy ./app/dispatcher ./common/buf
 
   wireguard-race:
     runs-on: ubuntu-latest

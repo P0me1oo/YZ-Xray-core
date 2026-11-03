@@ -1,6 +1,8 @@
 package dispatcher
 
 import (
+	"context"
+
 	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/buf"
 	"github.com/xtls/xray-core/features/stats"
@@ -23,3 +25,7 @@ func (w *SizeStatWriter) Close() error {
 func (w *SizeStatWriter) Interrupt() {
 	common.Interrupt(w.Writer)
 }
+
+func (w *SizeStatWriter) UnwrapWriter() buf.Writer                 { return w.Writer }
+func (w *SizeStatWriter) BeforeRawCopy(context.Context, int) error { return nil }
+func (w *SizeStatWriter) AfterRawCopy(n int64)                     { w.Counter.Add(n) }
