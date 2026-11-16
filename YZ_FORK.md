@@ -1,5 +1,7 @@
 # YZ-Xray-core 版本说明
 
+当前发布 [v26.12.0](https://github.com/P0me1oo/YZ-Xray-core/releases/tag/v26.12.0) 固定源码为 `36f4516090e3e2fe88dcbe0840126582cd6fb795`，安装包及构建来源见[发布核验](docs/release-26.12.0.md)。
+
 ## v26.12.0 DHT 识别与逐报文拦截（2026-11-16）
 
 候选版本 `v26.12.0`，修改起点为 `3c480b0c0d736157547f80036c0eb4687d3f1586`。现有运行标识、正式依赖和上游基线不变，未创建新固定提交或发布；开发版本记录见 [CHANGELOG.md](CHANGELOG.md)。

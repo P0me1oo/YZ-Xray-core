@@ -1,0 +1,109 @@
+{
+  "repo": "YZ-Xray-core",
+  "version": "v26.12.0",
+  "source_commit": "36f4516090e3e2fe88dcbe0840126582cd6fb795",
+  "release_url": "https://github.com/P0me1oo/YZ-Xray-core/releases/tag/v26.12.0",
+  "latest": true,
+  "assets": [
+    {
+      "repo": "YZ-Xray-core",
+      "asset": "SHA256SUMS",
+      "bytes": 360,
+      "sha256": "f83116cc39f129db6ea0d28117eb89b898d4a9bbb8adc5d79b3414ff93975484",
+      "anonymous": true
+    },
+    {
+      "repo": "YZ-Xray-core",
+      "asset": "xray-linux-amd64",
+      "bytes": 32112800,
+      "sha256": "3ff05002974803560c70c7554732d125d2d92afee9336ccf2f8e711ab87a0048",
+      "anonymous": true
+    },
+    {
+      "repo": "YZ-Xray-core",
+      "asset": "xray-linux-amd64.buildinfo.txt",
+      "bytes": 4580,
+      "sha256": "7d0d3da57e14a8af77c8957cf5df561ccad638ea242a92cf4bf347be40e114e0",
+      "anonymous": true
+    },
+    {
+      "repo": "YZ-Xray-core",
+      "asset": "xray-linux-arm64",
+      "bytes": 29884576,
+      "sha256": "cb4ec5c31c158e25390c994c7ced17a35667104269a4352583dca2bf71e327b1",
+      "anonymous": true
+    },
+    {
+      "repo": "YZ-Xray-core",
+      "asset": "xray-linux-arm64.buildinfo.txt",
+      "bytes": 4582,
+      "sha256": "931d954bfcd982f32850b710dd0b6a2a054ea44d633bd3def2c479cb616a82ae",
+      "anonymous": true
+    }
+  ],
+  "github_actions": [
+    {
+      "conclusion": "failure",
+      "databaseId": 43831033030,
+      "event": "release",
+      "headSha": "36f4516090e3e2fe88dcbe0840126582cd6fb795",
+      "name": "Build and Release",
+      "status": "completed"
+    },
+    {
+      "conclusion": "failure",
+      "databaseId": 43831032957,
+      "event": "release",
+      "headSha": "36f4516090e3e2fe88dcbe0840126582cd6fb795",
+      "name": "Build and Release for Windows 7",
+      "status": "completed"
+    },
+    {
+      "conclusion": "failure",
+      "databaseId": 43830114235,
+      "event": "push",
+      "headSha": "36f4516090e3e2fe88dcbe0840126582cd6fb795",
+      "name": "Tests and Checkings",
+      "status": "completed"
+    },
+    {
+      "conclusion": "failure",
+      "databaseId": 43830112882,
+      "event": "push",
+      "headSha": "36f4516090e3e2fe88dcbe0840126582cd6fb795",
+      "name": "Scheduled assets update",
+      "status": "completed"
+    },
+    {
+      "conclusion": "failure",
+      "databaseId": 43830112836,
+      "event": "push",
+      "headSha": "36f4516090e3e2fe88dcbe0840126582cd6fb795",
+      "name": "Build and Release",
+      "status": "completed"
+    },
+    {
+      "conclusion": "failure",
+      "databaseId": 43830112828,
+      "event": "push",
+      "headSha": "36f4516090e3e2fe88dcbe0840126582cd6fb795",
+      "name": "Build and Release for Windows 7",
+      "status": "completed"
+    }
+  ],
+  "docker_published": false,
+  "actions_execution": [
+    {
+      "run_id": 43831033030,
+      "jobs": 2,
+      "executed_steps": 0,
+      "conclusion": "failure"
+    },
+    {
+      "run_id": 43831032957,
+      "jobs": 2,
+      "executed_steps": 0,
+      "conclusion": "failure"
+    }
+  ]
+}
