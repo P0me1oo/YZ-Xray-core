@@ -27,6 +27,7 @@ type protocolSnifferWithMetadata struct {
 	// It will not be shown as a traffic type for routing unless there is no other successful sniffing.
 	metadataSniffer bool
 	network         net.Network
+	packetOnly      bool
 }
 
 type Sniffer struct {
@@ -36,11 +37,31 @@ type Sniffer struct {
 func NewSniffer(ctx context.Context) *Sniffer {
 	ret := &Sniffer{
 		sniffer: []protocolSnifferWithMetadata{
-			{func(c context.Context, b []byte) (SniffResult, error) { return http.SniffHTTP(b, c) }, false, net.Network_TCP},
-			{func(c context.Context, b []byte) (SniffResult, error) { return tls.SniffTLS(b) }, false, net.Network_TCP},
-			{func(c context.Context, b []byte) (SniffResult, error) { return bittorrent.SniffBittorrent(b) }, false, net.Network_TCP},
-			{func(c context.Context, b []byte) (SniffResult, error) { return quic.SniffQUIC(b) }, false, net.Network_UDP},
-			{func(c context.Context, b []byte) (SniffResult, error) { return bittorrent.SniffUTP(b) }, false, net.Network_UDP},
+			{
+				protocolSniffer: func(c context.Context, b []byte) (SniffResult, error) { return http.SniffHTTP(b, c) },
+				network:         net.Network_TCP,
+			},
+			{
+				protocolSniffer: func(c context.Context, b []byte) (SniffResult, error) { return tls.SniffTLS(b) },
+				network:         net.Network_TCP,
+			},
+			{
+				protocolSniffer: func(c context.Context, b []byte) (SniffResult, error) { return bittorrent.SniffBittorrent(b) },
+				network:         net.Network_TCP,
+			},
+			{
+				protocolSniffer: func(c context.Context, b []byte) (SniffResult, error) { return quic.SniffQUIC(b) },
+				network:         net.Network_UDP,
+			},
+			{
+				protocolSniffer: func(c context.Context, b []byte) (SniffResult, error) { return bittorrent.SniffUTP(b) },
+				network:         net.Network_UDP,
+			},
+			{
+				protocolSniffer: func(c context.Context, b []byte) (SniffResult, error) { return bittorrent.SniffDHT(b) },
+				network:         net.Network_UDP,
+				packetOnly:      true,
+			},
 		},
 	}
 	if sniffer, err := newFakeDNSSniffer(ctx); err == nil {
@@ -57,13 +78,23 @@ func NewSniffer(ctx context.Context) *Sniffer {
 var errUnknownContent = errors.New("unknown content")
 
 func (s *Sniffer) Sniff(c context.Context, payload []byte, network net.Network) (SniffResult, error) {
+	return s.SniffPacket(c, payload, payload, network)
+}
+
+// SniffPacket keeps KRPC on a complete datagram while preserving accumulated
+// payloads for sniffers such as QUIC that assemble data from several packets.
+func (s *Sniffer) SniffPacket(c context.Context, payload, packet []byte, network net.Network) (SniffResult, error) {
 	var pendingSniffer []protocolSnifferWithMetadata
 	for _, si := range s.sniffer {
 		protocolSniffer := si.protocolSniffer
 		if si.metadataSniffer || si.network != network {
 			continue
 		}
-		result, err := protocolSniffer(c, payload)
+		input := payload
+		if si.packetOnly {
+			input = packet
+		}
+		result, err := protocolSniffer(c, input)
 		if err == common.ErrNoClue {
 			pendingSniffer = append(pendingSniffer, si)
 			continue

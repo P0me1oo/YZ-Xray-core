@@ -8,6 +8,7 @@ import (
 
 	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/buf"
+	"github.com/xtls/xray-core/common/dht"
 	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/common/log"
 	"github.com/xtls/xray-core/common/net"
@@ -48,6 +49,27 @@ func (r *cachedReader) Cache(b *buf.Buffer, deadline time.Duration) error {
 	b.Resize(0, int32(n))
 	r.Unlock()
 	return nil
+}
+
+func (r *cachedReader) SniffPacket(ctx context.Context, sniffer *Sniffer, payload []byte, network net.Network) (SniffResult, error) {
+	if network != net.Network_UDP {
+		return sniffer.Sniff(ctx, payload, network)
+	}
+	r.Lock()
+	defer r.Unlock()
+	var packet []byte
+	if len(r.cache) > 0 && r.cache[0] != nil {
+		packet = r.cache[0].Bytes()
+	}
+	// Keep the cache alive during inspection, including concurrent Interrupt.
+	// No second datagram-sized buffer or payload copy is needed.
+	return sniffer.SniffPacket(ctx, payload, packet, network)
+}
+
+func (r *cachedReader) FirstPacketIsDHT() bool {
+	r.Lock()
+	defer r.Unlock()
+	return len(r.cache) > 0 && r.cache[0] != nil && dht.IsMessage(r.cache[0].Bytes())
 }
 
 func (r *cachedReader) readInternal() buf.MultiBuffer {
@@ -497,7 +519,7 @@ func sniffer(ctx context.Context, cReader *cachedReader, metadataOnly bool, netw
 				cacheDeadline -= cachingTimeElapsed
 
 				if !payload.IsEmpty() {
-					result, err := sniffer.Sniff(ctx, payload.Bytes(), network)
+					result, err := cReader.SniffPacket(ctx, sniffer, payload.Bytes(), network)
 					switch err {
 					case common.ErrNoClue: // No Clue: protocol not matches, and sniffer cannot determine whether there will be a match or not
 						totalAttempt++
@@ -531,6 +553,21 @@ func (d *DefaultDispatcher) routedDispatch(ctx context.Context, link *transport.
 	var handler outbound.Handler
 
 	routingLink := routing_session.AsRoutingContext(ctx)
+	if destination.Network == net.Network_UDP && session.GetForcedOutboundTagFromContext(ctx) == "" {
+		if reader, ok := link.Reader.(*cachedReader); ok && reader.FirstPacketIsDHT() {
+			if picker, ok := d.router.(dhtRoutePicker); ok && picker.HasDHTBlockRule() {
+				route, err := picker.PickDHTRoute(routingLink)
+				if err == nil && isBlackhole(d.ohm.GetHandler(route.GetOutboundTag())) {
+					// The datagram guard records and drops this first DHT packet.
+					// Route ordinary UDP without making BT a session-wide label.
+					content := *session.ContentFromContext(ctx)
+					content.Protocol = ""
+					ctx = session.ContextWithContent(ctx, &content)
+					routingLink = routing_session.AsRoutingContext(ctx)
+				}
+			}
+		}
+	}
 	inTag := routingLink.GetInboundTag()
 	isPickRoute := 0
 	if forcedOutboundTag := session.GetForcedOutboundTagFromContext(ctx); forcedOutboundTag != "" {
@@ -597,5 +634,13 @@ func (d *DefaultDispatcher) routedDispatch(ctx context.Context, link *transport.
 		log.Record(accessMessage)
 	}
 
+	if destination.Network == net.Network_UDP && isPickRoute != 1 && !isBlackhole(handler) {
+		if picker, ok := d.router.(dhtRoutePicker); ok && picker.HasDHTBlockRule() {
+			link.Reader = &dhtReader{
+				Reader: link.Reader, ctx: ctx, dispatcher: d, picker: picker,
+				routing: routingLink, destination: ob.Target,
+			}
+		}
+	}
 	handler.Dispatch(ctx, link)
 }

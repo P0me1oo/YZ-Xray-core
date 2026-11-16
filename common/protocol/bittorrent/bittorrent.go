@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/xtls/xray-core/common"
+	"github.com/xtls/xray-core/common/dht"
 )
 
 type SniffHeader struct{}
@@ -18,6 +19,13 @@ func (h *SniffHeader) Domain() string {
 }
 
 var errNotBittorrent = errors.New("not bittorrent header")
+
+func SniffDHT(b []byte) (*SniffHeader, error) {
+	if !dht.IsMessage(b) {
+		return nil, errNotBittorrent
+	}
+	return &SniffHeader{}, nil
+}
 
 func SniffBittorrent(b []byte) (*SniffHeader, error) {
 	if len(b) < 20 {

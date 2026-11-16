@@ -102,6 +102,9 @@ func newFakeDNSThenOthers(ctx context.Context, fakeDNSSniffer protocolSnifferWit
 			if ipAddressInRangeValue.addressInRange != nil {
 				if *ipAddressInRangeValue.addressInRange {
 					for _, v := range others {
+						if v.packetOnly {
+							continue
+						}
 						if v.metadataSniffer || bytes != nil {
 							if result, err := v.protocolSniffer(ctx, bytes); err == nil {
 								return DNSThenOthersSniffResult{domainName: result.Domain(), protocolOriginalName: result.Protocol()}, nil

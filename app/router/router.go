@@ -3,6 +3,7 @@ package router
 import (
 	"context"
 	"maps"
+	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -128,9 +129,10 @@ func (r *Router) ReloadRules(config *Config, shouldAppend bool) error {
 			return err
 		}
 		rr := &Rule{
-			Condition: cond,
-			Tag:       rule.GetTag(),
-			RuleTag:   rule.GetRuleTag(),
+			Condition:  cond,
+			Tag:        rule.GetTag(),
+			RuleTag:    rule.GetRuleTag(),
+			bitTorrent: slices.Contains(rule.Protocol, "bittorrent"),
 		}
 		if rr.RuleTag != "" && existTags[rr.RuleTag] {
 			return errors.New("duplicate ruleTag ", rr.RuleTag)
